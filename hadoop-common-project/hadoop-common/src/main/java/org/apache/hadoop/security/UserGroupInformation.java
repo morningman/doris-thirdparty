@@ -189,15 +189,15 @@ public class UserGroupInformation {
 
     @Override
     public boolean commit() throws LoginException {
-      LOG.debug("hadoop login commit");
+      LOG.warn("hadoop login commit");
       // if we already have a user, we are done.
       if (!subject.getPrincipals(User.class).isEmpty()) {
-        LOG.debug("Using existing subject: {}", subject.getPrincipals());
+        LOG.warn("Using existing subject: {}", subject.getPrincipals());
         return true;
       }
       Principal user = getCanonicalUser(KerberosPrincipal.class);
       if (user != null) {
-        LOG.debug("Using kerberos user: {}", user);
+        LOG.warn("Using kerberos user: {}", user);
       }
       //If we don't have a kerberos user and security is disabled, check
       //if user is specified in the environment or properties
@@ -211,11 +211,11 @@ public class UserGroupInformation {
       // use the OS user
       if (user == null) {
         user = getCanonicalUser(OS_PRINCIPAL_CLASS);
-        LOG.debug("Using local user: {}", user);
+        LOG.warn("Using local user: {}", user);
       }
       // if we found the user, add our principal
       if (user != null) {
-        LOG.debug("Using user: \"{}\" with name: {}", user, user.getName());
+        LOG.warn("Using user: \"{}\" with name: {}", user, user.getName());
 
         User userEntry = null;
         try {
@@ -227,7 +227,7 @@ public class UserGroupInformation {
         } catch (Exception e) {
           throw (LoginException)(new LoginException(e.toString()).initCause(e));
         }
-        LOG.debug("User entry: \"{}\"", userEntry);
+        LOG.warn("User entry: \"{}\"", userEntry);
 
         subject.getPrincipals().add(userEntry);
         return true;
@@ -243,13 +243,13 @@ public class UserGroupInformation {
 
     @Override
     public boolean login() throws LoginException {
-      LOG.debug("Hadoop login");
+      LOG.warn("Hadoop login");
       return true;
     }
 
     @Override
     public boolean logout() throws LoginException {
-      LOG.debug("Hadoop logout");
+      LOG.warn("Hadoop logout");
       return true;
     }
   }
@@ -594,6 +594,7 @@ public class UserGroupInformation {
    */ 
   public static UserGroupInformation getBestUGI(
       String ticketCachePath, String user) throws IOException {
+    LOG.warn("yy debug get best ugi, ticketCachePath {}, user {}", ticketCachePath, user, new Exception());
     if (ticketCachePath != null) {
       return getUGIFromTicketCache(ticketCachePath, user);
     } else if (user == null) {
@@ -618,8 +619,10 @@ public class UserGroupInformation {
   public static UserGroupInformation getUGIFromTicketCache(
             String ticketCache, String user) throws IOException {
     if (!isAuthenticationMethodEnabled(AuthenticationMethod.KERBEROS)) {
+      LOG.warn("yy debug get getUGIFromTicketCache no kerberos ticketCachePath {}, user {}", ticketCache, user, new Exception());
       return getBestUGI(null, user);
     }
+    LOG.warn("yy debug get getUGIFromTicketCache kerberos, ticketCachePath {}, user {}", ticketCache, user, new Exception());
     LoginParams params = new LoginParams();
     params.put(LoginParam.PRINCIPAL, user);
     params.put(LoginParam.CCACHE, ticketCache);
@@ -741,12 +744,12 @@ public class UserGroupInformation {
       for (String tokenFileLocation : tokenFileLocations) {
         if (tokenFileLocation != null && tokenFileLocation.length() > 0) {
           File tokenFile = new File(tokenFileLocation);
-          LOG.debug("Reading credentials from location {}",
+          LOG.warn("Reading credentials from location {}",
               tokenFile.getCanonicalPath());
           if (tokenFile.exists() && tokenFile.isFile()) {
             Credentials cred = Credentials.readTokenStorageFile(
                 tokenFile, conf);
-            LOG.debug("Loaded {} tokens from {}", cred.numberOfTokens(),
+            LOG.warn("Loaded {} tokens from {}", cred.numberOfTokens(),
                 tokenFile.getCanonicalPath());
             loginUser.addCredentials(cred);
           } else {
@@ -781,13 +784,13 @@ public class UserGroupInformation {
         }
       }
       if (numTokenBase64 > 0) {
-        LOG.debug("Loaded {} base64 tokens", numTokenBase64);
+        LOG.warn("Loaded {} base64 tokens", numTokenBase64);
       }
     } catch (IOException ioe) {
-      LOG.debug("Failure to load login credentials", ioe);
+      LOG.warn("Failure to load login credentials", ioe);
       throw ioe;
     }
-    LOG.debug("UGI loginUser: {}", loginUser);
+    LOG.warn("UGI loginUser: {}", loginUser);
     return loginUser;
   }
 
@@ -968,7 +971,7 @@ public class UserGroupInformation {
       do {
         try {
           long now = Time.now();
-          LOG.debug("Current time is {}, next refresh is {}", now, nextRefresh);
+          LOG.warn("Current time is {}, next refresh is {}", now, nextRefresh);
           if (now < nextRefresh) {
             Thread.sleep(nextRefresh - now);
           }
@@ -1062,7 +1065,7 @@ public class UserGroupInformation {
     @Override
     public void relogin() throws IOException {
       String output = Shell.execCommand(kinitCmd, "-R");
-      LOG.debug("Renewed ticket. kinit output: {}", output);
+      LOG.warn("Renewed ticket. kinit output: {}", output);
       reloginFromTicketCache();
     }
   }
@@ -1163,7 +1166,7 @@ public class UserGroupInformation {
     }
 
     try {
-      LOG.debug("Initiating logout for {}", getUserName());
+      LOG.warn("Initiating logout for {}", getUserName());
       // hadoop login context internally locks credentials.
       login.logout();
     } catch (LoginException le) {
@@ -1321,7 +1324,7 @@ public class UserGroupInformation {
     // register most recent relogin attempt
     user.setLastLogin(now);
     try {
-      LOG.debug("Initiating logout for {}", getUserName());
+      LOG.warn("Initiating logout for {}", getUserName());
       //clear up the kerberos state. But the tokens are not cleared! As per 
       //the Java kerberos login module code, only the kerberos credentials
       //are cleared
@@ -1330,7 +1333,7 @@ public class UserGroupInformation {
       //have the new credentials (pass it to the LoginContext constructor)
       login = newLoginContext(
         login.getAppName(), login.getSubject(), login.getConfiguration());
-      LOG.debug("Initiating re-login for {}", getUserName());
+      LOG.warn("Initiating re-login for {}", getUserName());
       login.login();
       // this should be unnecessary.  originally added due to improper locking
       // of the subject during relogin.
@@ -1754,7 +1757,7 @@ public class UserGroupInformation {
     try {
       return groups.getGroups(getShortUserName());
     } catch (IOException ie) {
-      LOG.debug("Failed to get groups for user {}", getShortUserName(), ie);
+      LOG.warn("Failed to get groups for user {}", getShortUserName(), ie);
       return Collections.emptyList();
     }
   }
@@ -1870,7 +1873,7 @@ public class UserGroupInformation {
   @InterfaceStability.Evolving
   public <T> T doAs(PrivilegedAction<T> action) {
     if (LOG.isDebugEnabled()) {
-      LOG.debug("PrivilegedAction [as: {}][action: {}]", this, action,
+      LOG.warn("PrivilegedAction [as: {}][action: {}]", this, action,
           new Exception());
     }
     return Subject.doAs(subject, action);
@@ -1893,13 +1896,13 @@ public class UserGroupInformation {
                     ) throws IOException, InterruptedException {
     try {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("PrivilegedAction [as: {}][action: {}]", this, action,
+        LOG.warn("PrivilegedAction [as: {}][action: {}]", this, action,
             new Exception());
       }
       return Subject.doAs(subject, action);
     } catch (PrivilegedActionException pae) {
       Throwable cause = pae.getCause();
-      LOG.debug("PrivilegedActionException as: {}", this, cause);
+      LOG.warn("PrivilegedActionException as: {}", this, cause);
       if (cause == null) {
         throw new RuntimeException("PrivilegedActionException with no " +
                 "underlying cause. UGI [" + this + "]" +": " + pae, pae);
@@ -1998,7 +2001,10 @@ public class UserGroupInformation {
     try {
       HadoopLoginContext login = newLoginContext(
         authenticationMethod.getLoginAppName(), subject, loginConf);
+      LOG.warn("yy debug doSubjectLogin before: {}, subject: {}", params.toString(), subject, new Exception());
+      login.logout();
       login.login();
+      LOG.warn("yy debug doSubjectLogin after: {}, subject: {}", params.toString(), subject, new Exception());
       UserGroupInformation ugi = new UserGroupInformation(login.getSubject());
       // attach login context for relogin unless this was a pre-existing
       // subject.
@@ -2007,6 +2013,7 @@ public class UserGroupInformation {
         ugi.setLogin(login);
         ugi.setLastLogin(Time.now());
       }
+      // ugi.relogin(login, false);
       return ugi;
     } catch (LoginException le) {
       KerberosAuthException kae =
